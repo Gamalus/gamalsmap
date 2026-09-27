@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GamalsMap – Berlin</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+
+    header {
+      background: #111;
+      color: white;
+      padding: 22px 18px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 30px;
+    }
+
+    header p {
+      margin: 8px 0 0;
+      color: #bbb;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 30px auto;
+      padding: 0 18px;
+    }
+
+    .map-card {
+      background: white;
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 26px;
+    }
+
+    .spot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 15px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .spot:last-child {
+      border-bottom: none;
+    }
+
+    .spot-name {
+      font-weight: bold;
+    }
+
+    .map-button {
+      background: #111;
+      color: white;
+      text-decoration: none;
+      padding: 9px 13px;
+      border-radius: 9px;
+      white-space: nowrap;
+    }
+
+    .map-button:hover {
+      opacity: 0.8;
+    }
+
+    .add-box {
+      margin-top: 25px;
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px;
+      margin: 7px 0;
+      border: 1px solid #ccc;
+      border-radius: 9px;
+      font-size: 16px;
+    }
+
+    .add-button {
+      width: 100%;
+      padding: 13px;
+      margin-top: 7px;
+      background: #111;
+      color: white;
+      border: none;
+      border-radius: 9px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .add-button:hover {
+      opacity: 0.85;
+    }
+
+    .delete-button {
+      background: none;
+      border: none;
+      color: #999;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .empty {
+      color: #888;
+      padding: 15px 0;
+    }
+
+    footer {
+      text-align: center;
+      color: #999;
+      padding: 30px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 500px) {
+      .spot {
+        align-items: flex-start;
+      }
+
+      .map-button {
+        font-size: 14px;
+        padding: 8px 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>GamalsMap</h1>
+    <p>Deine Orte in Berlin</p>
+  </header>
+
+  <div class="container">
+
+    <div class="map-card">
+      <h2>📍 Berlin</h2>
+
+      <div id="spots"></div>
+
+      <div class="add-box">
+        <h3>Ort hinzufügen</h3>
+
+        <input
+          type="text"
+          id="spotName"
+          placeholder="Name des Ortes"
+        >
+
+        <input
+          type="url"
+          id="spotUrl"
+          placeholder="Google Maps Link"
+        >
+
+        <button class="add-button" onclick="addSpot()">
+          + Ort hinzufügen
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    © GamalsMap
+  </footer>
+
+  <script>
+    let spots = JSON.parse(localStorage.getItem("gamalsmap-berlin")) || [
+      {
+        name: "Brandenburger Tor",
+        url: "https://www.google.com/maps/search/?api=1&query=Brandenburger+Tor+Berlin"
+      },
+      {
+        name: "Alexanderplatz",
+        url: "https://www.google.com/maps/search/?api=1&query=Alexanderplatz+Berlin"
+      },
+      {
+        name: "East Side Gallery",
+        url: "https://www.google.com/maps/search/?api=1&query=East+Side+Gallery+Berlin"
+      }
+    ];
+
+    function saveSpots() {
+      localStorage.setItem(
+        "gamalsmap-berlin",
+        JSON.stringify(spots)
+      );
+    }
+
+    function showSpots() {
+      const container = document.getElementById("spots");
+
+      if (spots.length === 0) {
+        container.innerHTML =
+          '<div class="empty">Noch keine Orte hinzugefügt.</div>';
+        return;
+      }
+
+      container.innerHTML = "";
+
+      spots.forEach((spot, index) => {
+        const div = document.createElement("div");
+        div.className = "spot";
+
+        div.innerHTML = `
+          <div class="spot-name">${escapeHtml(spot.name)}</div>
+
+          <div>
+            <a
+              class="map-button"
+              href="${spot.url}"
+              target="_blank"
+              rel="noopener"
+            >
+              Google Maps
+            </a>
+
+            <button
+              class="delete-button"
+              onclick="deleteSpot(${index})"
+            >
+              ✕
+            </button>
+          </div>
+        `;
+
+        container.appendChild(div);
+      });
+    }
+
+    function addSpot() {
+      const nameInput = document.getElementById("spotName");
+      const urlInput = document.getElementById("spotUrl");
+
+      const name = nameInput.value.trim();
+      const url = urlInput.value.trim();
+
+      if (!name || !url) {
+        alert("Bitte Name und Google Maps Link eingeben.");
+        return;
+      }
+
+      spots.push({
+        name: name,
+        url: url
+      });
+
+      saveSpots();
+      showSpots();
+
+      nameInput.value = "";
+      urlInput.value = "";
+    }
+
+    function deleteSpot(index) {
+      spots.splice(index, 1);
+      saveSpots();
+      showSpots();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    showSpots();
+  </script>
+
+</body>
+</html>
